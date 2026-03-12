@@ -1,13 +1,12 @@
 /**
  * Chord Audio Module
- * Web Audio API-based chord sound playback with instrument-specific timbres
+ * Web Audio API-based chord sound playback with distinct instrument timbres
  */
 const ChordAudio = (() => {
   let audioCtx = null;
   let isPlaying = false;
-  let currentInstrument = 'piano'; // 'piano', 'guitar', 'ukulele'
+  let currentInstrument = 'piano';
 
-  // Note frequencies (A4 = 440Hz)
   const NOTE_FREQ = {
     'C': 261.63, 'C#': 277.18, 'D': 293.66, 'D#': 311.13,
     'E': 329.63, 'F': 349.23, 'F#': 369.99, 'G': 392.00,
@@ -28,200 +27,209 @@ const ChordAudio = (() => {
     return baseFreq * Math.pow(2, octave - 4);
   }
 
-  function setInstrument(instrument) {
-    currentInstrument = instrument;
-  }
-
-  function getInstrument() {
-    return currentInstrument;
-  }
+  function setInstrument(instrument) { currentInstrument = instrument; }
+  function getInstrument() { return currentInstrument; }
 
   // =========================================
-  // Instrument-specific note synthesis
+  // Piano: Hammer strike → rich harmonics → long sustain
   // =========================================
-
-  /**
-   * Piano: bright attack, long sustain, gradual decay
-   * Uses sine + harmonics (2nd, 3rd, 5th partial) for rich tone
-   */
   function playPianoNote(ctx, dest, freq, now, duration) {
-    const masterGain = ctx.createGain();
-    masterGain.connect(dest);
+    const gain = ctx.createGain();
+    gain.connect(dest);
+    // Piano envelope: percussive attack, gentle decay, long release
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.22, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.06, now + duration * 0.7);
+    gain.gain.linearRampToValueAtTime(0.001, now + duration);
 
-    // Piano ADSR: fast attack, slight decay, sustain, release
-    masterGain.gain.setValueAtTime(0, now);
-    masterGain.gain.linearRampToValueAtTime(0.25, now + 0.01);  // sharp attack
-    masterGain.gain.exponentialRampToValueAtTime(0.15, now + 0.3); // decay
-    masterGain.gain.setValueAtTime(0.15, now + duration - 0.4);
-    masterGain.gain.linearRampToValueAtTime(0.001, now + duration);
+    // Fundamental
+    const o1 = ctx.createOscillator();
+    o1.type = 'sine';
+    o1.frequency.value = freq;
+    const g1 = ctx.createGain(); g1.gain.value = 0.5;
+    o1.connect(g1); g1.connect(gain);
 
-    // Fundamental (sine)
-    const osc1 = ctx.createOscillator();
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(freq, now);
-    const g1 = ctx.createGain();
-    g1.gain.setValueAtTime(0.6, now);
-    osc1.connect(g1);
-    g1.connect(masterGain);
-
-    // 2nd harmonic
-    const osc2 = ctx.createOscillator();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(freq * 2, now);
+    // 2nd partial (octave)
+    const o2 = ctx.createOscillator();
+    o2.type = 'sine';
+    o2.frequency.value = freq * 2;
     const g2 = ctx.createGain();
-    g2.gain.setValueAtTime(0.2, now);
-    g2.gain.exponentialRampToValueAtTime(0.05, now + 0.5);
-    osc2.connect(g2);
-    g2.connect(masterGain);
+    g2.gain.setValueAtTime(0.25, now);
+    g2.gain.exponentialRampToValueAtTime(0.05, now + 0.4);
+    o2.connect(g2); g2.connect(gain);
 
-    // 3rd harmonic (adds brightness)
-    const osc3 = ctx.createOscillator();
-    osc3.type = 'sine';
-    osc3.frequency.setValueAtTime(freq * 3, now);
+    // 3rd partial (adds richness)
+    const o3 = ctx.createOscillator();
+    o3.type = 'sine';
+    o3.frequency.value = freq * 3;
     const g3 = ctx.createGain();
-    g3.gain.setValueAtTime(0.1, now);
-    g3.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-    osc3.connect(g3);
-    g3.connect(masterGain);
+    g3.gain.setValueAtTime(0.12, now);
+    g3.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+    o3.connect(g3); g3.connect(gain);
 
-    // 5th harmonic (subtle shimmer)
-    const osc4 = ctx.createOscillator();
-    osc4.type = 'sine';
-    osc4.frequency.setValueAtTime(freq * 5, now);
+    // 4th partial (hammer brightness, decays fast)
+    const o4 = ctx.createOscillator();
+    o4.type = 'sine';
+    o4.frequency.value = freq * 4;
     const g4 = ctx.createGain();
-    g4.gain.setValueAtTime(0.03, now);
-    g4.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-    osc4.connect(g4);
-    g4.connect(masterGain);
+    g4.gain.setValueAtTime(0.08, now);
+    g4.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    o4.connect(g4); g4.connect(gain);
 
-    [osc1, osc2, osc3, osc4].forEach(o => { o.start(now); o.stop(now + duration); });
+    [o1, o2, o3, o4].forEach(o => { o.start(now); o.stop(now + duration); });
   }
 
-  /**
-   * Guitar: plucked string - sharp attack, quick decay, warm tone
-   * Uses sawtooth filtered through lowpass + harmonics decay
-   */
+  // =========================================
+  // Guitar: Steel string pluck → filtered harmonics → medium decay
+  // =========================================
   function playGuitarNote(ctx, dest, freq, now, duration) {
-    const masterGain = ctx.createGain();
-    masterGain.connect(dest);
+    const gain = ctx.createGain();
+    gain.connect(dest);
+    // Guitar: sharp pluck, fast initial decay, warm sustain
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.28, now + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.10, now + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.04, now + duration * 0.4);
+    gain.gain.linearRampToValueAtTime(0.001, now + duration);
 
-    // Guitar ADSR: very fast attack, quick decay, low sustain
-    masterGain.gain.setValueAtTime(0, now);
-    masterGain.gain.linearRampToValueAtTime(0.3, now + 0.005);  // pluck attack
-    masterGain.gain.exponentialRampToValueAtTime(0.08, now + 0.15); // quick decay
-    masterGain.gain.exponentialRampToValueAtTime(0.04, now + duration * 0.6);
-    masterGain.gain.linearRampToValueAtTime(0.001, now + duration);
+    // Lowpass filter: guitar body resonance, tone darkens over time
+    const lpf = ctx.createBiquadFilter();
+    lpf.type = 'lowpass';
+    lpf.frequency.setValueAtTime(5000, now);       // bright at pluck
+    lpf.frequency.exponentialRampToValueAtTime(600, now + duration * 0.6); // darkens
+    lpf.Q.value = 2;
+    lpf.connect(gain);
 
-    // Lowpass filter (guitar body resonance)
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(3000, now);
-    filter.frequency.exponentialRampToValueAtTime(800, now + duration * 0.5); // tone darkens
-    filter.Q.setValueAtTime(1.5, now);
-    filter.connect(masterGain);
+    // Body resonance peak
+    const peak = ctx.createBiquadFilter();
+    peak.type = 'peaking';
+    peak.frequency.value = 250; // guitar body ~250Hz
+    peak.gain.value = 6;
+    peak.Q.value = 3;
+    peak.connect(lpf);
 
-    // Sawtooth (rich harmonics, like a string)
-    const osc1 = ctx.createOscillator();
-    osc1.type = 'sawtooth';
-    osc1.frequency.setValueAtTime(freq, now);
-    const g1 = ctx.createGain();
-    g1.gain.setValueAtTime(0.4, now);
-    osc1.connect(g1);
-    g1.connect(filter);
+    // Sawtooth (rich string harmonics)
+    const o1 = ctx.createOscillator();
+    o1.type = 'sawtooth';
+    o1.frequency.value = freq;
+    const g1 = ctx.createGain(); g1.gain.value = 0.35;
+    o1.connect(g1); g1.connect(peak);
 
-    // Triangle (adds warmth)
-    const osc2 = ctx.createOscillator();
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(freq, now);
+    // Square wave (adds odd harmonics for metallic string character)
+    const o2 = ctx.createOscillator();
+    o2.type = 'square';
+    o2.frequency.value = freq;
     const g2 = ctx.createGain();
-    g2.gain.setValueAtTime(0.4, now);
-    osc2.connect(g2);
-    g2.connect(filter);
+    g2.gain.setValueAtTime(0.15, now);
+    g2.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    o2.connect(g2); g2.connect(peak);
 
-    // Slight detuning for realism
-    const osc3 = ctx.createOscillator();
-    osc3.type = 'sawtooth';
-    osc3.frequency.setValueAtTime(freq * 1.002, now); // slight detune
+    // Slight detune for chorus/realism
+    const o3 = ctx.createOscillator();
+    o3.type = 'sawtooth';
+    o3.frequency.value = freq * 1.003;
     const g3 = ctx.createGain();
-    g3.gain.setValueAtTime(0.15, now);
-    g3.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-    osc3.connect(g3);
-    g3.connect(filter);
+    g3.gain.setValueAtTime(0.12, now);
+    g3.gain.exponentialRampToValueAtTime(0.02, now + 0.3);
+    o3.connect(g3); g3.connect(peak);
 
-    [osc1, osc2, osc3].forEach(o => { o.start(now); o.stop(now + duration); });
+    // Pluck noise burst (simulates pick attack)
+    const bufferSize = ctx.sampleRate * 0.03;
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    }
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.15, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    const noiseLpf = ctx.createBiquadFilter();
+    noiseLpf.type = 'bandpass';
+    noiseLpf.frequency.value = freq * 3;
+    noiseLpf.Q.value = 1;
+    noise.connect(noiseLpf);
+    noiseLpf.connect(noiseGain);
+    noiseGain.connect(gain);
+    noise.start(now);
+
+    [o1, o2, o3].forEach(o => { o.start(now); o.stop(now + duration); });
   }
 
-  /**
-   * Ukulele: bright plucked nylon string - short, bright, happy tone
-   * Higher register, shorter sustain, brighter filter
-   */
+  // =========================================
+  // Ukulele: Nylon pluck → bright & short → happy tone
+  // =========================================
   function playUkuleleNote(ctx, dest, freq, now, duration) {
-    const masterGain = ctx.createGain();
-    masterGain.connect(dest);
+    // Ukulele plays an octave higher for bright, small-body character
+    const ukeFreq = freq * 2;
+    const ukeDur = Math.min(duration, 1.2); // shorter sustain
 
-    // Ukulele ADSR: fast attack, medium-quick decay, short sustain
-    masterGain.gain.setValueAtTime(0, now);
-    masterGain.gain.linearRampToValueAtTime(0.25, now + 0.003); // snap attack
-    masterGain.gain.exponentialRampToValueAtTime(0.1, now + 0.1);
-    masterGain.gain.exponentialRampToValueAtTime(0.03, now + duration * 0.5);
-    masterGain.gain.linearRampToValueAtTime(0.001, now + duration);
+    const gain = ctx.createGain();
+    gain.connect(dest);
+    // Ukulele: snappy pluck, quick decay, very short sustain
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.20, now + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.02, now + ukeDur * 0.35);
+    gain.gain.linearRampToValueAtTime(0.001, now + ukeDur);
 
-    // Brighter lowpass (nylon string, small body)
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(4500, now);
-    filter.frequency.exponentialRampToValueAtTime(1500, now + duration * 0.4);
-    filter.Q.setValueAtTime(2, now);
-    filter.connect(masterGain);
+    // Bright filter (small nylon body)
+    const lpf = ctx.createBiquadFilter();
+    lpf.type = 'lowpass';
+    lpf.frequency.setValueAtTime(6000, now);
+    lpf.frequency.exponentialRampToValueAtTime(2000, now + ukeDur * 0.3);
+    lpf.Q.value = 1;
+    lpf.connect(gain);
 
-    // Triangle (nylon-like, softer harmonics)
-    const osc1 = ctx.createOscillator();
-    osc1.type = 'triangle';
-    osc1.frequency.setValueAtTime(freq, now);
-    const g1 = ctx.createGain();
-    g1.gain.setValueAtTime(0.5, now);
-    osc1.connect(g1);
-    g1.connect(filter);
+    // High-mid boost (ukulele brightness)
+    const peak = ctx.createBiquadFilter();
+    peak.type = 'peaking';
+    peak.frequency.value = 2000;
+    peak.gain.value = 4;
+    peak.Q.value = 2;
+    peak.connect(lpf);
+
+    // Triangle (soft nylon string)
+    const o1 = ctx.createOscillator();
+    o1.type = 'triangle';
+    o1.frequency.value = ukeFreq;
+    const g1 = ctx.createGain(); g1.gain.value = 0.45;
+    o1.connect(g1); g1.connect(peak);
 
     // Sine fundamental
-    const osc2 = ctx.createOscillator();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(freq, now);
-    const g2 = ctx.createGain();
-    g2.gain.setValueAtTime(0.3, now);
-    osc2.connect(g2);
-    g2.connect(filter);
+    const o2 = ctx.createOscillator();
+    o2.type = 'sine';
+    o2.frequency.value = ukeFreq;
+    const g2 = ctx.createGain(); g2.gain.value = 0.35;
+    o2.connect(g2); g2.connect(peak);
 
-    // High harmonic for brightness
-    const osc3 = ctx.createOscillator();
-    osc3.type = 'sine';
-    osc3.frequency.setValueAtTime(freq * 2, now);
+    // Soft 2nd harmonic
+    const o3 = ctx.createOscillator();
+    o3.type = 'sine';
+    o3.frequency.value = ukeFreq * 2;
     const g3 = ctx.createGain();
-    g3.gain.setValueAtTime(0.15, now);
-    g3.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-    osc3.connect(g3);
-    g3.connect(filter);
+    g3.gain.setValueAtTime(0.12, now);
+    g3.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+    o3.connect(g3); g3.connect(peak);
 
-    [osc1, osc2, osc3].forEach(o => { o.start(now); o.stop(now + duration); });
+    [o1, o2, o3].forEach(o => { o.start(now); o.stop(now + ukeDur); });
   }
 
   // =========================================
   // Chord playback
   // =========================================
-
-  /**
-   * Play a single chord with the current instrument timbre
-   */
   function playChord(chordName, duration = 1.5, instrument) {
     const inst = instrument || currentInstrument;
+    console.log('Playing chord:', chordName, 'instrument:', inst);
+
     return new Promise((resolve) => {
       const ctx = getAudioContext();
       const notes = MusicTheory.getChordNotes(chordName);
       if (notes.length === 0) { resolve(); return; }
 
       const now = ctx.currentTime;
-
-      // Instrument-specific octave range
       const baseOctave = inst === 'ukulele' ? 4 : 3;
 
       notes.forEach((note, i) => {
@@ -234,22 +242,18 @@ const ChordAudio = (() => {
 
         const freq = noteFrequency(note, octave);
 
-        // Strum effect: slight delay between notes for guitar/ukulele
-        const strumDelay = (inst === 'guitar' || inst === 'ukulele') ? i * 0.03 : 0;
+        // Strum delay for guitar/ukulele (notes don't hit simultaneously)
+        const strumDelay = (inst === 'guitar') ? i * 0.04
+                         : (inst === 'ukulele') ? i * 0.025
+                         : 0; // piano: simultaneous
         const noteStart = now + strumDelay;
 
-        switch (inst) {
-          case 'piano':
-            playPianoNote(ctx, ctx.destination, freq, noteStart, duration);
-            break;
-          case 'guitar':
-            playGuitarNote(ctx, ctx.destination, freq, noteStart, duration);
-            break;
-          case 'ukulele':
-            playUkuleleNote(ctx, ctx.destination, freq, noteStart, duration);
-            break;
-          default:
-            playPianoNote(ctx, ctx.destination, freq, noteStart, duration);
+        if (inst === 'guitar') {
+          playGuitarNote(ctx, ctx.destination, freq, noteStart, duration);
+        } else if (inst === 'ukulele') {
+          playUkuleleNote(ctx, ctx.destination, freq, noteStart, duration);
+        } else {
+          playPianoNote(ctx, ctx.destination, freq, noteStart, duration);
         }
       });
 
@@ -257,9 +261,6 @@ const ChordAudio = (() => {
     });
   }
 
-  /**
-   * Play multiple chords in sequence
-   */
   async function playChordSequence(chordNames, interval = 1.8, onChordStart, instrument) {
     if (isPlaying) return;
     isPlaying = true;
@@ -274,13 +275,8 @@ const ChordAudio = (() => {
     isPlaying = false;
   }
 
-  function stopPlayback() {
-    isPlaying = false;
-  }
-
-  function getIsPlaying() {
-    return isPlaying;
-  }
+  function stopPlayback() { isPlaying = false; }
+  function getIsPlaying() { return isPlaying; }
 
   return {
     playChord,
