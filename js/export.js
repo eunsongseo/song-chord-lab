@@ -378,13 +378,12 @@ const Export = (() => {
 
     let html = '';
 
-    // Title
+    // Title + Song info in blockquote
+    html += `<blockquote>`;
     if (metadata.songName) {
-      html += `<font size="5"><b>${esc(metadata.songName)}</b></font><br>`;
-      html += `<hr><br>`;
+      html += `<font size="5"><b>${esc(metadata.songName)}</b></font><br><br>`;
     }
 
-    // Song info
     const infoRows = [
       { label: '아티스트', value: metadata.artist },
       { label: '앨범', value: metadata.albumName },
@@ -415,6 +414,7 @@ const Export = (() => {
       }
       html += chordLine + `<br>`;
     }
+    html += `</blockquote>`;
 
     // Chord notes table - split into primary and advanced, sorted by degree
     if (chords.length > 0) {
@@ -492,8 +492,7 @@ const Export = (() => {
 
     // Capo table
     if (capoPosition > 0 && chords.length > 0) {
-      html += `<br><font size="4"><b>카포 변환표</b></font><br>`;
-      html += `<hr>`;
+      html += `<blockquote><font size="4"><b>카포 변환표</b></font></blockquote>`;
       html += `<table width="100%" border="1" cellpadding="10" cellspacing="0">`;
       html += `<tr bgcolor="#f0f0f0"><td align="center"><b>카포</b></td>`;
       chords.forEach(name => {
