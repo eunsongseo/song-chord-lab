@@ -66,10 +66,19 @@ const Export = (() => {
       notesTitle.textContent = '코드 구성음';
       notesSection.appendChild(notesTitle);
 
+      const typeNames = {
+        'major': '메이저', 'minor': '마이너', 'dim': '디미니쉬', 'aug': '어그먼트',
+        '7': '도미넌트 7', 'm7': '마이너 7', 'maj7': '메이저 7',
+        'dim7': '디미니쉬 7', 'm7b5': '하프 디미니쉬',
+        'sus2': '서스 2', 'sus4': '서스 4',
+        '6': '메이저 6', 'm6': '마이너 6',
+        '9': '도미넌트 9', 'add9': '애드 9', '5': '파워 코드',
+      };
+
       const table = document.createElement('table');
       const thead = document.createElement('thead');
       const headerRow = document.createElement('tr');
-      ['코드', '구성음'].forEach(text => {
+      ['코드', '타입', '구성음'].forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
         headerRow.appendChild(th);
@@ -90,6 +99,16 @@ const Export = (() => {
         chordLink.textContent = `${name} ▶`;
         tdName.appendChild(chordLink);
         row.appendChild(tdName);
+
+        const tdType = document.createElement('td');
+        tdType.style.fontSize = '13px';
+        tdType.style.color = '#666';
+        const parsed = MusicTheory.parseChordName(name);
+        if (parsed) {
+          const intervalKey = MusicTheory.SUFFIX_MAP[parsed.suffix] || MusicTheory.SUFFIX_MAP[parsed.suffix.toLowerCase()];
+          tdType.textContent = typeNames[intervalKey] || parsed.suffix || '메이저';
+        }
+        row.appendChild(tdType);
 
         const tdNotes = document.createElement('td');
         const notes = MusicTheory.getChordNotesDisplay(name);
@@ -308,16 +327,32 @@ const Export = (() => {
       html += `<br>`;
       html += `<p style="font-size:18px;font-weight:bold;margin:15px 0 5px 0;">코드 구성음</p>`;
       html += `<hr style="border:none;border-top:2px solid #4a90d9;margin:5px 0 10px 0;">`;
+      const typeNames = {
+        'major': '메이저', 'minor': '마이너', 'dim': '디미니쉬', 'aug': '어그먼트',
+        '7': '도미넌트 7', 'm7': '마이너 7', 'maj7': '메이저 7',
+        'dim7': '디미니쉬 7', 'm7b5': '하프 디미니쉬',
+        'sus2': '서스 2', 'sus4': '서스 4',
+        '6': '메이저 6', 'm6': '마이너 6',
+        '9': '도미넌트 9', 'add9': '애드 9', '5': '파워 코드',
+      };
       html += `<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;text-align:center;font-size:14px;">`;
       html += `<thead><tr style="background:#f5f5f5;">`;
       html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">코드</th>`;
+      html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">타입</th>`;
       html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">구성음</th>`;
       html += `</tr></thead><tbody>`;
       chords.forEach(name => {
         const notes = MusicTheory.getChordNotesDisplay(name);
         const chordUrl = `${viewerBase}?chords=${encodeURIComponent(name)}`;
+        const parsed = MusicTheory.parseChordName(name);
+        let typeName = '';
+        if (parsed) {
+          const intervalKey = MusicTheory.SUFFIX_MAP[parsed.suffix] || MusicTheory.SUFFIX_MAP[parsed.suffix.toLowerCase()];
+          typeName = typeNames[intervalKey] || parsed.suffix || '메이저';
+        }
         html += `<tr>`;
         html += `<td style="border:1px solid #ddd;padding:8px;font-weight:bold;"><a href="${chordUrl}" style="color:#2563eb;text-decoration:none;">${esc(name)} ▶</a></td>`;
+        html += `<td style="border:1px solid #ddd;padding:8px;color:#666;font-size:13px;">${esc(typeName)}</td>`;
         html += `<td style="border:1px solid #ddd;padding:8px;">${esc(notes.join(', '))}</td>`;
         html += `</tr>`;
       });
