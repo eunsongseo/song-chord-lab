@@ -435,6 +435,7 @@ const Export = (() => {
           t += sz ? `<td align="center"><font size="${sz}"><b>${h}</b></font></td>` : `<td align="center"><b>${h}</b></td>`;
         });
         t += `</tr>`;
+        let rowIdx = 0;
         const groups = groupChordsByFamily(chordList);
         groups.forEach((group, gi) => {
           group.chords.forEach(name => {
@@ -446,9 +447,8 @@ const Export = (() => {
               typeName = typeNames[intervalKey] || parsed.suffix || '메이저';
             }
             const notes = MusicTheory.getChordNotesDisplay(name);
-            const deg = MusicTheory.getChordDegreeLabels(name);
-            const fmtNotes = notes.map((n, i) => `<b>${esc(n)}</b><font color="#999999" size="1">(${esc(deg[i] || '')})</font>`).join(', ');
-            t += `<tr>`;
+            const rowBg = rowIdx % 2 === 1 ? ' bgcolor="#f8f9fa"' : '';
+            t += `<tr${rowBg}>`;
             // 코드 column: 도수 작게 + 코드명
             let chordCell = '';
             if (hasKey) {
@@ -463,11 +463,13 @@ const Export = (() => {
             t += isCompact
               ? `<td align="center"><font color="#888888" size="2">${esc(typeName)}</font></td>`
               : `<td align="center"><font color="#888888">${esc(typeName)}</font></td>`;
-            // 구성음 column
+            // 구성음 column (note names only)
+            const fmtNotes = notes.map(n => `<b>${esc(n)}</b>`).join(', ');
             t += isCompact
               ? `<td align="center"><font size="2">${fmtNotes}</font></td>`
               : `<td align="center">${fmtNotes}</td>`;
             t += `</tr>`;
+            rowIdx++;
           });
         });
         t += `</table>`;
