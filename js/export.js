@@ -77,11 +77,18 @@ const Export = (() => {
       table.appendChild(thead);
 
       const tbody = document.createElement('tbody');
+      const viewerBase = 'https://eunsongseo.github.io/song-chord-lab/viewer.html';
       chords.forEach(name => {
         const row = document.createElement('tr');
         const tdName = document.createElement('td');
-        tdName.textContent = name;
         tdName.style.fontWeight = '600';
+        const chordLink = document.createElement('a');
+        chordLink.href = `${viewerBase}?chords=${encodeURIComponent(name)}`;
+        chordLink.target = '_blank';
+        chordLink.style.color = '#2563eb';
+        chordLink.style.textDecoration = 'none';
+        chordLink.textContent = `${name} ▶`;
+        tdName.appendChild(chordLink);
         row.appendChild(tdName);
 
         const tdNotes = document.createElement('td');
@@ -288,10 +295,12 @@ const Export = (() => {
       html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">코드</th>`;
       html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">구성음</th>`;
       html += `</tr></thead><tbody>`;
+      const viewerBase = 'https://eunsongseo.github.io/song-chord-lab/viewer.html';
       chords.forEach(name => {
         const notes = MusicTheory.getChordNotesDisplay(name);
+        const chordUrl = `${viewerBase}?chords=${encodeURIComponent(name)}`;
         html += `<tr>`;
-        html += `<td style="border:1px solid #ddd;padding:8px;font-weight:bold;">${esc(name)}</td>`;
+        html += `<td style="border:1px solid #ddd;padding:8px;font-weight:bold;"><a href="${chordUrl}" style="color:#2563eb;text-decoration:none;">${esc(name)} &#9654;</a></td>`;
         html += `<td style="border:1px solid #ddd;padding:8px;">${esc(notes.join(', '))}</td>`;
         html += `</tr>`;
       });
