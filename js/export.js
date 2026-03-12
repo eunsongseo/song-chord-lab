@@ -46,12 +46,18 @@ const Export = (() => {
       row.style.fontSize = '14px';
 
       if (isChords && chords.length > 0) {
-        const chordLinks = chords.map(c => {
+        const basic = chords.filter(c => isTriadChord(c));
+        const advanced = chords.filter(c => !isTriadChord(c));
+        const basicLinks = basic.map(c => {
           const url = `${viewerBase}?chords=${encodeURIComponent(c)}`;
           return `<a href="${url}" style="color:#2563eb;text-decoration:none;font-weight:500;" target="_blank">${esc(c)}</a>`;
         }).join(', ');
         const allUrl = `${viewerBase}?chords=${encodeURIComponent(chords.join(','))}`;
-        row.innerHTML = `<b>${label}</b>&nbsp;&nbsp;&nbsp;${chordLinks}&nbsp;&nbsp;<a href="${allUrl}" style="color:#3b82f6;font-size:12px;text-decoration:none;" target="_blank">[전체 보기]</a>`;
+        let chordsHtml = `<b>${label}</b>&nbsp;&nbsp;&nbsp;${basicLinks}`;
+        if (advanced.length > 0) {
+          chordsHtml += `&nbsp;&nbsp;...&nbsp;&nbsp;<a href="${allUrl}" style="color:#3b82f6;font-size:12px;text-decoration:none;" target="_blank">[심화 코드 보기]</a>`;
+        }
+        row.innerHTML = chordsHtml;
       } else {
         row.innerHTML = `<b>${label}</b>&nbsp;&nbsp;&nbsp;${esc(value)}`;
       }
@@ -432,14 +438,20 @@ const Export = (() => {
       html += `<b>${esc(label)}</b>&nbsp;&nbsp;&nbsp;${esc(value)}<br>`;
     });
 
-    // 사용 코드 (with links)
+    // 사용 코드 (triads + advanced link)
     if (chords.length > 0) {
-      const chordLinks = chords.map(c => {
+      const nBasic = chords.filter(c => isTriadChord(c));
+      const nAdvanced = chords.filter(c => !isTriadChord(c));
+      const basicLinks = nBasic.map(c => {
         const url = `${viewerBase}?chords=${encodeURIComponent(c)}`;
         return `<a href="${url}">${esc(c)}</a>`;
       }).join(', ');
       const allUrl = `${viewerBase}?chords=${encodeURIComponent(chords.join(','))}`;
-      html += `<b>사용 코드</b>&nbsp;&nbsp;&nbsp;${chordLinks}&nbsp;&nbsp;<a href="${allUrl}">[전체 보기]</a><br>`;
+      let chordLine = `<b>사용 코드</b>&nbsp;&nbsp;&nbsp;${basicLinks}`;
+      if (nAdvanced.length > 0) {
+        chordLine += `&nbsp;&nbsp;...&nbsp;&nbsp;<a href="${allUrl}">[심화 코드 보기]</a>`;
+      }
+      html += chordLine + `<br>`;
     }
 
     // Chord notes table - split into basic triads and advanced
@@ -583,12 +595,22 @@ const Export = (() => {
       { label: '박자', value: metadata.timeSignature },
       { label: '키', value: metadata.key },
       { label: '카포', value: capoPosition > 0 ? `${capoPosition}프렛` : '' },
-      { label: '사용 코드', value: chords.join(', ') },
     ].filter(r => r.value);
 
     infoRows.forEach(({ label, value }) => {
       text += `${label}   ${value}\n`;
     });
+
+    // 사용 코드 (triads only, with advanced note)
+    if (chords.length > 0) {
+      const ptBasic = chords.filter(c => isTriadChord(c));
+      const ptAdv = chords.filter(c => !isTriadChord(c));
+      if (ptBasic.length > 0) {
+        text += `사용 코드   ${ptBasic.join(', ')}`;
+        if (ptAdv.length > 0) text += ` ... +심화 코드 ${ptAdv.length}개`;
+        text += '\n';
+      }
+    }
 
     if (chords.length > 0) {
       const basicChords = chords.filter(c => isTriadChord(c));
