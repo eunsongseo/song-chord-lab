@@ -287,16 +287,27 @@ const Export = (() => {
   }
 
   /**
-   * Generate Naver-compatible HTML (inline styles, with <a> links)
+   * Generate Naver Smart Editor compatible HTML
+   * Uses only basic HTML tags that Naver preserves: <b>, <font>, <a>, <table>, <br>
+   * Avoids CSS style attributes which Naver strips
    */
   function generateNaverHTML(metadata, chords, capoPosition) {
     const viewerBase = 'https://eunsongseo.github.io/song-chord-lab/viewer.html';
-    let html = '<div style="font-family:\'Noto Sans KR\',\'Malgun Gothic\',sans-serif;line-height:1.8;">';
+    const typeNames = {
+      'major': '메이저', 'minor': '마이너', 'dim': '디미니쉬', 'aug': '어그먼트',
+      '7': '도미넌트 7', 'm7': '마이너 7', 'maj7': '메이저 7',
+      'dim7': '디미니쉬 7', 'm7b5': '하프 디미니쉬',
+      'sus2': '서스 2', 'sus4': '서스 4',
+      '6': '메이저 6', 'm6': '마이너 6',
+      '9': '도미넌트 9', 'add9': '애드 9', '5': '파워 코드',
+    };
+
+    let html = '';
 
     // Title
     if (metadata.songName) {
-      html += `<p style="font-size:24px;font-weight:bold;margin:0 0 5px 0;">${esc(metadata.songName)}</p>`;
-      html += `<hr style="border:none;border-top:2px solid #333;margin:8px 0 15px 0;">`;
+      html += `<font size="5"><b>${esc(metadata.songName)}</b></font><br>`;
+      html += `━━━━━━━━━━━━━━━━━━━━<br><br>`;
     }
 
     // Song info
@@ -306,41 +317,28 @@ const Export = (() => {
       { label: '템포', value: metadata.tempo ? `${metadata.tempo} BPM` : '' },
       { label: '키', value: metadata.key },
       { label: '카포', value: capoPosition > 0 ? `${capoPosition}프렛` : '' },
-      { label: '사용 코드', value: chords.join(', '), isChords: true },
     ].filter(r => r.value);
 
-    infoRows.forEach(({ label, value, isChords }) => {
-      if (isChords && chords.length > 0) {
-        const chordLinks = chords.map(c => {
-          const url = `${viewerBase}?chords=${encodeURIComponent(c)}`;
-          return `<a href="${url}" style="color:#2563eb;text-decoration:none;font-weight:500;">${esc(c)}</a>`;
-        }).join(', ');
-        const allUrl = `${viewerBase}?chords=${encodeURIComponent(chords.join(','))}`;
-        html += `<p style="margin:4px 0;font-size:14px;"><b>${esc(label)}</b>&nbsp;&nbsp;&nbsp;${chordLinks}&nbsp;&nbsp;<a href="${allUrl}" style="color:#3b82f6;font-size:12px;text-decoration:none;">[전체 보기]</a></p>`;
-      } else {
-        html += `<p style="margin:4px 0;font-size:14px;"><b>${esc(label)}</b>&nbsp;&nbsp;&nbsp;${esc(value)}</p>`;
-      }
+    infoRows.forEach(({ label, value }) => {
+      html += `<b>${esc(label)}</b>&nbsp;&nbsp;&nbsp;${esc(value)}<br>`;
     });
+
+    // 사용 코드 (with links)
+    if (chords.length > 0) {
+      const chordLinks = chords.map(c => {
+        const url = `${viewerBase}?chords=${encodeURIComponent(c)}`;
+        return `<a href="${url}">${esc(c)}</a>`;
+      }).join(', ');
+      const allUrl = `${viewerBase}?chords=${encodeURIComponent(chords.join(','))}`;
+      html += `<b>사용 코드</b>&nbsp;&nbsp;&nbsp;${chordLinks}&nbsp;&nbsp;<a href="${allUrl}">[전체 보기]</a><br>`;
+    }
 
     // Chord notes table
     if (chords.length > 0) {
-      html += `<br>`;
-      html += `<p style="font-size:18px;font-weight:bold;margin:15px 0 5px 0;">코드 구성음</p>`;
-      html += `<hr style="border:none;border-top:2px solid #4a90d9;margin:5px 0 10px 0;">`;
-      const typeNames = {
-        'major': '메이저', 'minor': '마이너', 'dim': '디미니쉬', 'aug': '어그먼트',
-        '7': '도미넌트 7', 'm7': '마이너 7', 'maj7': '메이저 7',
-        'dim7': '디미니쉬 7', 'm7b5': '하프 디미니쉬',
-        'sus2': '서스 2', 'sus4': '서스 4',
-        '6': '메이저 6', 'm6': '마이너 6',
-        '9': '도미넌트 9', 'add9': '애드 9', '5': '파워 코드',
-      };
-      html += `<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;text-align:center;font-size:14px;">`;
-      html += `<thead><tr style="background:#f5f5f5;">`;
-      html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">코드</th>`;
-      html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">타입</th>`;
-      html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">구성음</th>`;
-      html += `</tr></thead><tbody>`;
+      html += `<br><font size="4"><b>코드 구성음</b></font><br>`;
+      html += `━━━━━━━━━━━━━━━━━━━━<br>`;
+      html += `<table width="100%" border="1" cellpadding="10" cellspacing="0">`;
+      html += `<tr bgcolor="#f0f0f0"><td align="center"><b>코드</b></td><td align="center"><b>타입</b></td><td align="center"><b>구성음</b></td></tr>`;
       chords.forEach(name => {
         const notes = MusicTheory.getChordNotesDisplay(name);
         const chordUrl = `${viewerBase}?chords=${encodeURIComponent(name)}`;
@@ -351,75 +349,63 @@ const Export = (() => {
           typeName = typeNames[intervalKey] || parsed.suffix || '메이저';
         }
         html += `<tr>`;
-        html += `<td style="border:1px solid #ddd;padding:8px;font-weight:bold;"><a href="${chordUrl}" style="color:#2563eb;text-decoration:none;">${esc(name)} ▶</a></td>`;
-        html += `<td style="border:1px solid #ddd;padding:8px;color:#666;font-size:13px;">${esc(typeName)}</td>`;
-        html += `<td style="border:1px solid #ddd;padding:8px;">${esc(notes.join(', '))}</td>`;
+        html += `<td align="center"><b><a href="${chordUrl}">${esc(name)} ▶</a></b></td>`;
+        html += `<td align="center"><font color="#888888">${esc(typeName)}</font></td>`;
+        html += `<td align="center">${esc(notes.join(', '))}</td>`;
         html += `</tr>`;
       });
-      html += `</tbody></table>`;
+      html += `</table>`;
     }
 
     // Capo table
     if (capoPosition > 0 && chords.length > 0) {
-      html += `<br>`;
-      html += `<p style="font-size:18px;font-weight:bold;margin:15px 0 5px 0;">카포 변환표</p>`;
-      html += `<hr style="border:none;border-top:2px solid #4a90d9;margin:5px 0 10px 0;">`;
-      html += `<table border="1" cellpadding="8" cellspacing="0" style="border-collapse:collapse;width:100%;text-align:center;font-size:14px;">`;
-      html += `<thead><tr style="background:#f5f5f5;">`;
-      html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">카포</th>`;
+      html += `<br><font size="4"><b>카포 변환표</b></font><br>`;
+      html += `━━━━━━━━━━━━━━━━━━━━<br>`;
+      html += `<table width="100%" border="1" cellpadding="10" cellspacing="0">`;
+      html += `<tr bgcolor="#f0f0f0"><td align="center"><b>카포</b></td>`;
       chords.forEach(name => {
-        html += `<th style="border:1px solid #ddd;padding:8px;font-weight:bold;">${esc(name)}</th>`;
+        html += `<td align="center"><b>${esc(name)}</b></td>`;
       });
-      html += `</tr></thead><tbody>`;
+      html += `</tr>`;
 
       const capoTable = MusicTheory.generateCapoTable(chords);
       [0, capoPosition].forEach(pos => {
         const entry = capoTable[pos];
         const isCurrent = pos === capoPosition;
-        const bgStyle = isCurrent ? 'background:#eef4ff;' : '';
-        html += `<tr>`;
-        html += `<td style="border:1px solid #ddd;padding:8px;font-weight:bold;${bgStyle}">${pos === 0 ? '원래 코드' : `카포 ${pos}프렛`}</td>`;
+        html += `<tr${isCurrent ? ' bgcolor="#eef4ff"' : ''}>`;
+        html += `<td align="center"><b>${pos === 0 ? '원래 코드' : `카포 ${pos}프렛`}</b></td>`;
         entry.chords.forEach(chord => {
-          html += `<td style="border:1px solid #ddd;padding:8px;${bgStyle}${isCurrent ? 'font-weight:bold;color:#2563eb;' : ''}">${esc(chord)}</td>`;
+          html += `<td align="center">${isCurrent ? `<b><font color="#2563eb">${esc(chord)}</font></b>` : esc(chord)}</td>`;
         });
         html += `</tr>`;
       });
-      html += `</tbody></table>`;
+      html += `</table>`;
     }
 
     // Image placeholder
     if (chords.length > 0) {
-      html += `<br>`;
-      html += `<p style="color:#999;font-size:13px;margin:15px 0;font-style:italic;">※ 코드 표기 이미지는 아래에 첨부</p>`;
+      html += `<br><font color="#999999">※ 코드 표기 이미지는 아래에 첨부</font><br>`;
     }
 
     // Links
     if (chords.length > 0 || metadata.songName || metadata.artist) {
-      html += `<br>`;
-      html += `<p style="font-size:18px;font-weight:bold;margin:15px 0 5px 0;">관련 링크</p>`;
-      html += `<hr style="border:none;border-top:2px solid #4a90d9;margin:5px 0 10px 0;">`;
+      html += `<br><font size="4"><b>관련 링크</b></font><br>`;
+      html += `━━━━━━━━━━━━━━━━━━━━<br>`;
 
       if (chords.length > 0) {
         const allUrl = `${viewerBase}?chords=${encodeURIComponent(chords.join(','))}`;
-        html += `<p style="margin:4px 0;font-size:14px;">▶ <a href="${allUrl}" style="color:#2563eb;text-decoration:none;">코드 재생/표기 보기</a></p>`;
+        html += `▶ <a href="${allUrl}">코드 재생/표기 보기</a><br>`;
       }
 
       if (metadata.songName || metadata.artist) {
         const query = encodeURIComponent(`${metadata.artist || ''} ${metadata.songName || ''}`);
-        const links = [
-          { text: 'Genius 가사', url: `https://genius.com/search?q=${query}` },
-          { text: 'YouTube', url: `https://www.youtube.com/results?search_query=${query}` },
-          { text: 'Spotify', url: `https://open.spotify.com/search/${query}` },
-          { text: 'Apple Music', url: `https://music.apple.com/search?term=${query}` },
-        ];
-
-        links.forEach(({ text, url }) => {
-          html += `<p style="margin:4px 0;font-size:14px;"><a href="${url}" style="color:#2563eb;text-decoration:none;">${text}</a></p>`;
-        });
+        html += `<a href="https://genius.com/search?q=${query}">Genius 가사</a><br>`;
+        html += `<a href="https://www.youtube.com/results?search_query=${query}">YouTube</a><br>`;
+        html += `<a href="https://open.spotify.com/search/${query}">Spotify</a><br>`;
+        html += `<a href="https://music.apple.com/search?term=${query}">Apple Music</a><br>`;
       }
     }
 
-    html += '</div>';
     return html;
   }
 
