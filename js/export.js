@@ -378,7 +378,8 @@ const Export = (() => {
 
     let html = '';
 
-    // Title + URL
+    // Block 1: Title + URL + metadata + 사용 코드
+    html += `<blockquote>`;
     if (metadata.songName) {
       html += `<font size="5"><b>${esc(metadata.songName)}</b></font><br>`;
       html += `<font color="#999999">https://mosica-b.github.io/chord-lab/</font><br>`;
@@ -416,6 +417,7 @@ const Export = (() => {
       }
       html += chordLine + `<br>`;
     }
+    html += `</blockquote>`;
 
     // Chord notes table - split into primary and advanced, sorted by degree
     if (chords.length > 0) {
@@ -485,17 +487,23 @@ const Export = (() => {
         return t;
       }
 
-      // Primary chords
+      // Block 2: 주요 화음
       if (basicChords.length > 0) {
-        html += `<br><font size="4"><b>주요 화음</b></font><br>`;
+        html += `<blockquote>`;
+        html += `<font size="4"><b>주요 화음</b></font><br>`;
         html += `━━━━━━━━━━━━━━━━━━━━<br>`;
         html += buildNaverTable(basicChords, false);
-      }
 
-      // Advanced chords
-      if (advancedChords.length > 0) {
-        html += `<br><font size="3"><b>심화 코드</b></font><br>`;
-        html += buildNaverTable(advancedChords, true);
+        // 심화 코드 (same block)
+        if (advancedChords.length > 0) {
+          html += `<br><font size="3"><b>심화 코드</b></font><br>`;
+          html += buildNaverTable(advancedChords, true);
+        }
+
+        if (chords.length > 0) {
+          html += `<br><font color="#999999">※ 코드 표기 이미지는 아래에 첨부</font><br>`;
+        }
+        html += `</blockquote>`;
       }
     }
 
@@ -524,14 +532,10 @@ const Export = (() => {
       html += `</table>`;
     }
 
-    // Image placeholder
-    if (chords.length > 0) {
-      html += `<br><font color="#999999">※ 코드 표기 이미지는 아래에 첨부</font><br>`;
-    }
-
-    // Links
+    // Block 3: 관련 링크
     if (chords.length > 0 || metadata.songName || metadata.artist) {
-      html += `<br><font size="4"><b>관련 링크</b></font><br>`;
+      html += `<blockquote>`;
+      html += `<font size="4"><b>관련 링크</b></font><br>`;
       html += `━━━━━━━━━━━━━━━━━━━━<br>`;
 
       if (chords.length > 0) {
@@ -546,6 +550,7 @@ const Export = (() => {
         html += `<a href="https://open.spotify.com/search/${query}">Spotify</a><br>`;
         html += `<a href="https://music.apple.com/search?term=${query}">Apple Music</a><br>`;
       }
+      html += `</blockquote>`;
     }
 
     return html;
