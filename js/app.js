@@ -132,9 +132,12 @@ const App = (() => {
         // Search album via iTunes
         if (result.songName || result.artist) {
           const album = await ITunesSearch.searchAlbum(result.songName, result.artist);
-          if (album && album.albumName && !state.metadata.albumName) {
-            state.metadata.albumName = album.albumName;
-            document.getElementById('albumName').value = album.albumName;
+          if (album) {
+            if (album.albumName && !state.metadata.albumName) {
+              state.metadata.albumName = album.albumName;
+              document.getElementById('albumName').value = album.albumName;
+            }
+            if (album.trackViewUrl) state.metadata.appleMusicUrl = album.trackViewUrl;
             saveState();
             updatePreview();
           }
@@ -162,6 +165,7 @@ const App = (() => {
           if (album && album.albumName) {
             state.metadata.albumName = album.albumName;
             document.getElementById('albumName').value = album.albumName;
+            if (album.trackViewUrl) state.metadata.appleMusicUrl = album.trackViewUrl;
             saveState();
             updatePreview();
           } else {

@@ -38,6 +38,8 @@ const ITunesSearch = (() => {
         albumName: best.collectionName || '',
         artworkUrl: best.artworkUrl100 || '',
         releaseDate: best.releaseDate ? best.releaseDate.substring(0, 10) : '',
+        trackViewUrl: best.trackViewUrl || '',
+        artistViewUrl: best.artistViewUrl || '',
       };
     } catch (e) {
       console.warn('iTunes search failed:', e);

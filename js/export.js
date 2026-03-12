@@ -284,12 +284,15 @@ const Export = (() => {
 
       // Streaming links
       if (metadata.songName || metadata.artist) {
-        const query = encodeURIComponent(`${metadata.artist || ''} ${metadata.songName || ''}`);
+        const q = `${metadata.artist || ''} ${metadata.songName || ''}`.trim();
+        const query = encodeURIComponent(q);
+        const lyricsQuery = encodeURIComponent(`${q} 가사`);
+        const appleMusicUrl = metadata.appleMusicUrl || `https://music.apple.com/search?term=${query}`;
         const links = [
           { emoji: '🎵', text: 'Genius 가사', url: `https://genius.com/search?q=${query}` },
-          { emoji: '▶️', text: 'YouTube', url: `https://www.youtube.com/results?search_query=${query}` },
+          { emoji: '▶️', text: 'YouTube 가사', url: `https://www.youtube.com/results?search_query=${lyricsQuery}` },
           { emoji: '🎧', text: 'Spotify', url: `https://open.spotify.com/search/${query}` },
-          { emoji: '🍎', text: 'Apple Music', url: `https://music.apple.com/search?term=${query}` },
+          { emoji: '🍎', text: 'Apple Music', url: appleMusicUrl },
         ];
 
         links.forEach(({ emoji, text, url }) => {
@@ -531,11 +534,17 @@ const Export = (() => {
       }
 
       if (metadata.songName || metadata.artist) {
-        const query = encodeURIComponent(`${metadata.artist || ''} ${metadata.songName || ''}`);
+        const q = `${metadata.artist || ''} ${metadata.songName || ''}`.trim();
+        const query = encodeURIComponent(q);
+        const lyricsQuery = encodeURIComponent(`${q} 가사`);
         html += `<a href="https://genius.com/search?q=${query}">Genius 가사</a><br>`;
-        html += `<a href="https://www.youtube.com/results?search_query=${query}">YouTube</a><br>`;
+        html += `<a href="https://www.youtube.com/results?search_query=${lyricsQuery}">YouTube 가사</a><br>`;
         html += `<a href="https://open.spotify.com/search/${query}">Spotify</a><br>`;
-        html += `<a href="https://music.apple.com/search?term=${query}">Apple Music</a><br>`;
+        if (metadata.appleMusicUrl) {
+          html += `<a href="${esc(metadata.appleMusicUrl)}">Apple Music</a><br>`;
+        } else {
+          html += `<a href="https://music.apple.com/search?term=${query}">Apple Music</a><br>`;
+        }
       }
     }
 
@@ -634,13 +643,16 @@ const Export = (() => {
     }
 
     if (metadata.songName || metadata.artist) {
-      const query = encodeURIComponent(`${metadata.artist || ''} ${metadata.songName || ''}`);
+      const q = `${metadata.artist || ''} ${metadata.songName || ''}`.trim();
+      const query = encodeURIComponent(q);
+      const lyricsQuery = encodeURIComponent(`${q} 가사`);
+      const appleMusicUrl = metadata.appleMusicUrl || `https://music.apple.com/search?term=${query}`;
       text += `\n관련 링크\n`;
       text += `${'─'.repeat(30)}\n`;
       text += `Genius 가사: https://genius.com/search?q=${query}\n`;
-      text += `YouTube: https://www.youtube.com/results?search_query=${query}\n`;
+      text += `YouTube 가사: https://www.youtube.com/results?search_query=${lyricsQuery}\n`;
       text += `Spotify: https://open.spotify.com/search/${query}\n`;
-      text += `Apple Music: https://music.apple.com/search?term=${query}\n`;
+      text += `Apple Music: ${appleMusicUrl}\n`;
     }
 
     return text;
