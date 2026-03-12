@@ -102,7 +102,18 @@ const App = (() => {
         if (result.lyricist) { state.metadata.lyricist = result.lyricist; document.getElementById('lyricist').value = result.lyricist; }
         if (result.tempo) { state.metadata.tempo = result.tempo; document.getElementById('tempo').value = result.tempo; }
         if (result.timeSignature) { state.metadata.timeSignature = result.timeSignature; document.getElementById('timeSignature').value = result.timeSignature; }
-        if (result.key) { state.metadata.key = result.key; document.getElementById('songKey').value = result.key; }
+        if (result.key) {
+          state.metadata.key = result.key;
+          const keySelect = document.getElementById('songKey');
+          // Add option dynamically if not present (e.g., modulation "F → Gb")
+          if (!keySelect.querySelector(`option[value="${result.key}"]`)) {
+            const opt = document.createElement('option');
+            opt.value = result.key;
+            opt.textContent = result.key;
+            keySelect.appendChild(opt);
+          }
+          keySelect.value = result.key;
+        }
 
         // Add chords
         if (result.chords.length > 0) {
@@ -581,7 +592,15 @@ const App = (() => {
       document.getElementById('lyricist').value = state.metadata.lyricist || '';
       document.getElementById('tempo').value = state.metadata.tempo || '';
       document.getElementById('timeSignature').value = state.metadata.timeSignature || '';
-      document.getElementById('songKey').value = state.metadata.key || '';
+      const keyVal = state.metadata.key || '';
+      const keySelect = document.getElementById('songKey');
+      if (keyVal && !keySelect.querySelector(`option[value="${keyVal}"]`)) {
+        const opt = document.createElement('option');
+        opt.value = keyVal;
+        opt.textContent = keyVal;
+        keySelect.appendChild(opt);
+      }
+      keySelect.value = keyVal;
       document.getElementById('capoPosition').value = state.capoPosition;
 
       // Restore UI
