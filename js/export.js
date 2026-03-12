@@ -148,30 +148,29 @@ const Export = (() => {
       preview.appendChild(capoSection);
     }
 
-    // 4. Notation Images
+    // 4. Notation Image Placeholders
     if (chords.length > 0) {
-      const notationTypes = [
-        { title: '오선표기', render: Renderers.renderStaffNotation },
-        { title: '기타 타브', render: Renderers.renderGuitarTab },
-        { title: '기타 코드 다이어그램', render: Renderers.renderGuitarDiagrams },
-        { title: '우쿨렐레 타브', render: Renderers.renderUkuleleTab },
-        { title: '우쿨렐레 코드 다이어그램', render: Renderers.renderUkuleleDiagrams },
-        { title: '피아노 코드', render: Renderers.renderPianoKeyboards },
-      ];
-
-      notationTypes.forEach(({ title, render }) => {
-        const section = createNotationSection(title);
-        const container = document.createElement('div');
-        render(container, chords);
-        section.appendChild(container);
-        preview.appendChild(section);
-      });
+      const placeholderSection = document.createElement('div');
+      placeholderSection.style.margin = '20px 0';
+      placeholderSection.style.padding = '16px';
+      placeholderSection.style.background = '#f8f9fa';
+      placeholderSection.style.borderRadius = '8px';
+      placeholderSection.style.border = '2px dashed #ccc';
+      placeholderSection.style.textAlign = 'center';
+      placeholderSection.style.color = '#888';
+      placeholderSection.style.fontSize = '14px';
+      placeholderSection.style.lineHeight = '2';
+      placeholderSection.innerHTML = `
+        <p style="font-weight:600;color:#555;margin-bottom:4px;">📎 코드 표기 이미지 삽입 위치</p>
+        <p>다운로드한 이미지를 여기에 첨부해주세요</p>
+        <p style="font-size:12px;color:#aaa;">(오선보 · 기타 타브 · 기타 다이어그램 · 우쿨렐레 타브 · 우쿨렐레 다이어그램 · 피아노)</p>
+      `;
+      preview.appendChild(placeholderSection);
     }
 
-    // 5. Links
-    if (metadata.songName || metadata.artist) {
+    // 5. Links (viewer + streaming)
+    if (chords.length > 0 || metadata.songName || metadata.artist) {
       const linksSection = document.createElement('div');
-      linksSection.className = 'links-section';
       linksSection.style.marginTop = '20px';
 
       const linksTitle = document.createElement('p');
@@ -180,36 +179,43 @@ const Export = (() => {
       linksTitle.textContent = '관련 링크';
       linksSection.appendChild(linksTitle);
 
-      const query = encodeURIComponent(`${metadata.artist || ''} ${metadata.songName || ''}`);
+      // Viewer link
+      if (chords.length > 0) {
+        const allUrl = `${viewerBase}?chords=${encodeURIComponent(chords.join(','))}`;
+        const p = document.createElement('p');
+        p.style.margin = '4px 0';
+        p.style.fontSize = '14px';
+        p.innerHTML = `▶ <a href="${allUrl}" target="_blank" style="color:#2563eb;text-decoration:none;">코드 재생/표기 보기</a>`;
+        linksSection.appendChild(p);
+      }
 
-      const links = [
-        { text: 'Genius 가사', url: `https://genius.com/search?q=${query}` },
-        { text: 'YouTube', url: `https://www.youtube.com/results?search_query=${query}` },
-        { text: 'Spotify', url: `https://open.spotify.com/search/${query}` },
-        { text: 'Apple Music', url: `https://music.apple.com/search?term=${query}` },
-      ];
+      // Streaming links
+      if (metadata.songName || metadata.artist) {
+        const query = encodeURIComponent(`${metadata.artist || ''} ${metadata.songName || ''}`);
+        const links = [
+          { emoji: '🎵', text: 'Genius 가사', url: `https://genius.com/search?q=${query}` },
+          { emoji: '▶️', text: 'YouTube', url: `https://www.youtube.com/results?search_query=${query}` },
+          { emoji: '🎧', text: 'Spotify', url: `https://open.spotify.com/search/${query}` },
+          { emoji: '🍎', text: 'Apple Music', url: `https://music.apple.com/search?term=${query}` },
+        ];
 
-      links.forEach(({ text, url }) => {
-        const a = document.createElement('a');
-        a.href = url;
-        a.textContent = text;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        linksSection.appendChild(a);
-      });
+        links.forEach(({ emoji, text, url }) => {
+          const p = document.createElement('p');
+          p.style.margin = '4px 0';
+          p.style.fontSize = '14px';
+          const a = document.createElement('a');
+          a.href = url;
+          a.textContent = `${emoji} ${text}`;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.style.color = '#2563eb';
+          a.style.textDecoration = 'none';
+          p.appendChild(a);
+          linksSection.appendChild(p);
+        });
+      }
 
       preview.appendChild(linksSection);
-    }
-
-    // 6. Viewer link (single clean URL)
-    if (chords.length > 0) {
-      const viewerBase = 'https://eunsongseo.github.io/song-chord-lab/viewer.html';
-      const allUrl = `${viewerBase}?chords=${encodeURIComponent(chords.join(','))}`;
-      const viewerP = document.createElement('p');
-      viewerP.style.margin = '15px 0';
-      viewerP.style.fontSize = '14px';
-      viewerP.innerHTML = `▶ 코드 재생/표기 보기: <a href="${allUrl}" target="_blank" style="color:#2563eb;text-decoration:none;">${allUrl}</a>`;
-      preview.appendChild(viewerP);
     }
   }
 
