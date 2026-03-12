@@ -378,11 +378,10 @@ const Export = (() => {
 
     let html = '';
 
-    // Title + URL
+    // Title
     if (metadata.songName) {
       html += `<font size="5"><b>${esc(metadata.songName)}</b></font><br>`;
-      html += `<font color="#999999">https://mosica-b.github.io/chord-lab/</font><br>`;
-      html += `━━━━━━━━━━━━━━━━━━━━<br><br>`;
+      html += `<hr><br>`;
     }
 
     // Song info
@@ -488,7 +487,7 @@ const Export = (() => {
       // Primary chords
       if (basicChords.length > 0) {
         html += `<br><font size="4"><b>주요 화음</b></font><br>`;
-        html += `━━━━━━━━━━━━━━━━━━━━<br>`;
+        html += `<hr>`;
         html += buildNaverTable(basicChords, false);
       }
 
@@ -502,7 +501,7 @@ const Export = (() => {
     // Capo table
     if (capoPosition > 0 && chords.length > 0) {
       html += `<br><font size="4"><b>카포 변환표</b></font><br>`;
-      html += `━━━━━━━━━━━━━━━━━━━━<br>`;
+      html += `<hr>`;
       html += `<table width="100%" border="1" cellpadding="10" cellspacing="0">`;
       html += `<tr bgcolor="#f0f0f0"><td align="center"><b>카포</b></td>`;
       chords.forEach(name => {
@@ -532,7 +531,7 @@ const Export = (() => {
     // Links
     if (chords.length > 0 || metadata.songName || metadata.artist) {
       html += `<br><font size="4"><b>관련 링크</b></font><br>`;
-      html += `━━━━━━━━━━━━━━━━━━━━<br>`;
+      html += `<hr>`;
 
       if (chords.length > 0) {
         const allUrl = `${viewerBase}?chords=${encodeURIComponent(chords.join(','))}`;
