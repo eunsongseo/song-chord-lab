@@ -77,19 +77,45 @@ const MusicXMLParser = (() => {
   }
 
   function parseKey(doc) {
-    const keyEl = doc.querySelector('key');
-    if (!keyEl) return '';
-    const fifths = keyEl.querySelector('fifths');
-    const mode = keyEl.querySelector('mode');
-    if (!fifths) return '';
+    // Collect all key changes across measures in order
+    const measures = doc.querySelectorAll('part:first-of-type measure');
+    const keySequence = [];
+    let lastKey = '';
 
-    const fifthsVal = fifths.textContent.trim();
-    const modeVal = mode ? mode.textContent.trim() : 'major';
-
-    if (modeVal === 'minor') {
-      return FIFTHS_TO_MINOR[fifthsVal] || '';
+    for (const measure of measures) {
+      const keyEls = measure.querySelectorAll('attributes key');
+      for (const keyEl of keyEls) {
+        const fifths = keyEl.querySelector('fifths');
+        if (!fifths) continue;
+        const fifthsVal = fifths.textContent.trim();
+        const mode = keyEl.querySelector('mode');
+        const modeVal = mode ? mode.textContent.trim() : 'major';
+        const keyName = modeVal === 'minor'
+          ? (FIFTHS_TO_MINOR[fifthsVal] || '')
+          : (FIFTHS_TO_MAJOR[fifthsVal] || '');
+        if (keyName && keyName !== lastKey) {
+          keySequence.push(keyName);
+          lastKey = keyName;
+        }
+      }
     }
-    return FIFTHS_TO_MAJOR[fifthsVal] || '';
+
+    if (keySequence.length === 0) {
+      // Fallback: try first <key> anywhere
+      const keyEl = doc.querySelector('key');
+      if (!keyEl) return '';
+      const fifths = keyEl.querySelector('fifths');
+      if (!fifths) return '';
+      const fifthsVal = fifths.textContent.trim();
+      const mode = keyEl.querySelector('mode');
+      const modeVal = mode ? mode.textContent.trim() : 'major';
+      return modeVal === 'minor'
+        ? (FIFTHS_TO_MINOR[fifthsVal] || '')
+        : (FIFTHS_TO_MAJOR[fifthsVal] || '');
+    }
+
+    // Single key or modulation sequence
+    return keySequence.join(' → ');
   }
 
   function parseTimeSignature(doc) {

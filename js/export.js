@@ -183,7 +183,7 @@ const Export = (() => {
           keyLabel.style.fontSize = '12px';
           keyLabel.style.color = '#999';
           keyLabel.style.margin = '6px 0 0 0';
-          keyLabel.textContent = `* ${metadata.key} Key 기준`;
+          keyLabel.textContent = `* ${primaryKey(metadata.key)} Key 기준`;
           section.appendChild(keyLabel);
         }
 
@@ -654,12 +654,23 @@ const Export = (() => {
    * Get scale degree info for a chord relative to a key
    * e.g., "E7" in key "A" → { semitones: 7, roman: "V7" }
    */
+  /**
+   * Extract the primary (first) key from a key string that may contain modulations
+   * e.g., "A → C → A" → "A", "Bbm" → "Bbm"
+   */
+  function primaryKey(key) {
+    if (!key) return '';
+    return key.split('→')[0].trim();
+  }
+
   function getScaleDegreeInfo(chordName, key) {
     if (!key) return null;
+    const pk = primaryKey(key);
+    if (!pk) return null;
     const parsed = MusicTheory.parseChordName(chordName);
     if (!parsed) return null;
 
-    const keyRoot = key.endsWith('m') ? key.slice(0, -1) : key;
+    const keyRoot = pk.endsWith('m') ? pk.slice(0, -1) : pk;
     const keyIdx = MusicTheory.noteIndex(keyRoot);
     const chordIdx = MusicTheory.noteIndex(parsed.root);
     if (keyIdx < 0 || chordIdx < 0) return null;
@@ -722,7 +733,9 @@ const Export = (() => {
    */
   function getDominant7th(key) {
     if (!key) return null;
-    const root = key.endsWith('m') ? key.slice(0, -1) : key;
+    const pk = primaryKey(key);
+    if (!pk) return null;
+    const root = pk.endsWith('m') ? pk.slice(0, -1) : pk;
     const rootIdx = MusicTheory.noteIndex(root);
     if (rootIdx < 0) return null;
     const vIdx = (rootIdx + 7) % 12;
