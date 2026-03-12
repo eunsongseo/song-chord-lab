@@ -82,9 +82,8 @@ const Export = (() => {
       const basicChords = sortByScaleDegree(chords.filter(c => isPrimaryChord(c, metadata.key)), metadata.key);
       const advancedChords = sortByScaleDegree(chords.filter(c => !isPrimaryChord(c, metadata.key)), metadata.key);
       const hasKey = !!metadata.key;
-      const colCount = hasKey ? 4 : 3;
-
-      // Helper: build a chord table section
+      // Helper: build a chord table section (3-column: 코드, 타입, 구성음)
+      // Roman numeral shown as small text above chord name
       function buildChordTable(title, chordList, isCompact) {
         const section = document.createElement('div');
         section.style.marginBottom = '20px';
@@ -95,8 +94,7 @@ const Export = (() => {
         const table = document.createElement('table');
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        const headers = hasKey ? ['도수', '코드', '타입', '구성음'] : ['코드', '타입', '구성음'];
-        headers.forEach(text => {
+        ['코드', '타입', '구성음'].forEach(text => {
           const th = document.createElement('th');
           th.textContent = text;
           if (isCompact) th.style.fontSize = '13px';
@@ -112,20 +110,20 @@ const Export = (() => {
             const row = document.createElement('tr');
             const fs = isCompact ? '12px' : '14px';
 
-            // Roman numeral column
-            if (hasKey) {
-              const tdDeg = document.createElement('td');
-              tdDeg.style.textAlign = 'center';
-              tdDeg.style.fontWeight = '600';
-              tdDeg.style.fontSize = isCompact ? '12px' : '14px';
-              tdDeg.style.color = '#555';
-              const info = getScaleDegreeInfo(name, metadata.key);
-              tdDeg.textContent = info ? info.roman : '';
-              row.appendChild(tdDeg);
-            }
-
+            // 코드 column: Roman numeral (small) + chord name
             const tdName = document.createElement('td');
             tdName.style.fontSize = fs;
+            if (hasKey) {
+              const info = getScaleDegreeInfo(name, metadata.key);
+              if (info) {
+                const romanSpan = document.createElement('span');
+                romanSpan.style.fontSize = isCompact ? '10px' : '11px';
+                romanSpan.style.color = '#888';
+                romanSpan.style.display = 'block';
+                romanSpan.textContent = info.roman;
+                tdName.appendChild(romanSpan);
+              }
+            }
             const chordLink = document.createElement('a');
             chordLink.href = `${viewerBase}?chords=${encodeURIComponent(name)}`;
             chordLink.target = '_blank';
@@ -164,7 +162,7 @@ const Export = (() => {
           if (gi < groups.length - 1) {
             const sep = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = colCount;
+            td.colSpan = 3;
             td.style.height = isCompact ? '4px' : '6px';
             td.style.padding = '0';
             td.style.borderLeft = 'none';
@@ -423,15 +421,16 @@ const Export = (() => {
       const basicChords = sortByScaleDegree(chords.filter(c => isPrimaryChord(c, metadata.key)), metadata.key);
       const advancedChords = sortByScaleDegree(chords.filter(c => !isPrimaryChord(c, metadata.key)), metadata.key);
       const hasKey = !!metadata.key;
-      const colCount = hasKey ? 4 : 3;
+      // 3-column layout for all renderers
 
-      // Helper: build Naver-compatible chord table
+      // Helper: build Naver-compatible chord table (3-column: 코드, 타입, 구성음)
+      // Roman numeral is shown as small text above chord name in 코드 column
       function buildNaverTable(chordList, isCompact) {
         let t = '';
         const pad = isCompact ? '6' : '10';
         const sz = isCompact ? '2' : null;
         t += `<table width="100%" border="1" cellpadding="${pad}" cellspacing="0">`;
-        const headerCells = hasKey ? ['도수', '코드', '타입', '구성음'] : ['코드', '타입', '구성음'];
+        const headerCells = ['코드', '타입', '구성음'];
         t += `<tr bgcolor="#f0f0f0">`;
         headerCells.forEach(h => {
           t += sz ? `<td align="center"><font size="${sz}"><b>${h}</b></font></td>` : `<td align="center"><b>${h}</b></td>`;
@@ -451,16 +450,16 @@ const Export = (() => {
             }
             const fmtNotes = notes.map((n, i) => `<b>${esc(n)}</b><font color="#999999" size="1">(${esc(deg[i] || '')})</font>`).join(', ');
             t += `<tr>`;
+            // 코드 column: Roman numeral (small) + chord name
+            let chordCell = '';
             if (hasKey) {
               const info = getScaleDegreeInfo(name, metadata.key);
-              const roman = info ? info.roman : '';
-              t += isCompact
-                ? `<td align="center"><font size="2"><b>${esc(roman)}</b></font></td>`
-                : `<td align="center"><b>${esc(roman)}</b></td>`;
+              if (info) chordCell += `<font color="#888888" size="1">${esc(info.roman)}</font><br>`;
             }
+            chordCell += `<b><a href="${chordUrl}">${esc(name)} ▶</a></b>`;
             t += isCompact
-              ? `<td align="center"><font size="2"><a href="${chordUrl}"><b>${esc(name)} ▶</b></a></font></td>`
-              : `<td align="center"><b><a href="${chordUrl}">${esc(name)} ▶</a></b></td>`;
+              ? `<td align="center"><font size="2">${chordCell}</font></td>`
+              : `<td align="center">${chordCell}</td>`;
             t += isCompact
               ? `<td align="center"><font color="#888888" size="2">${esc(typeName)}</font></td>`
               : `<td align="center"><font color="#888888">${esc(typeName)}</font></td>`;
@@ -470,12 +469,12 @@ const Export = (() => {
             t += `</tr>`;
           });
           if (gi < groups.length - 1) {
-            t += `<tr><td colspan="${colCount}" bgcolor="#eef2f7">&nbsp;</td></tr>`;
+            t += `<tr><td colspan="3" bgcolor="#eef2f7">&nbsp;</td></tr>`;
           }
         });
         t += `</table>`;
         if (hasKey) {
-          t += `<font color="#999999" size="1">* ${esc(metadata.key)} Key 기준</font><br>`;
+          t += `<font color="#999999" size="1">* ${esc(primaryKey(metadata.key))} Key 기준</font><br>`;
         }
         return t;
       }
@@ -598,16 +597,16 @@ const Export = (() => {
             const notesStr = notes.map((n, i) => `${n}(${deg[i] || ''})`).join(', ');
             if (hasKey) {
               const info = getScaleDegreeInfo(name, metadata.key);
-              const roman = info ? info.roman : '';
-              t += `${roman.padEnd(8)}${name.padEnd(10)}${notesStr}\n`;
+              const roman = info ? `(${info.roman})` : '';
+              t += `${name} ${roman}`.trim().padEnd(16) + `${notesStr}\n`;
             } else {
-              t += `${name.padEnd(10)}${notesStr}\n`;
+              t += `${name.padEnd(16)}${notesStr}\n`;
             }
           });
           if (gi < groups.length - 1) t += '\n';
         });
         if (hasKey) {
-          t += `* ${metadata.key} Key 기준\n`;
+          t += `* ${primaryKey(metadata.key)} Key 기준\n`;
         }
         return t;
       }
