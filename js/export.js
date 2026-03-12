@@ -378,9 +378,10 @@ const Export = (() => {
 
     let html = '';
 
-    // Title
+    // Title + URL
     if (metadata.songName) {
       html += `<font size="5"><b>${esc(metadata.songName)}</b></font><br>`;
+      html += `<font color="#999999">https://mosica-b.github.io/chord-lab/</font><br>`;
       html += `━━━━━━━━━━━━━━━━━━━━<br><br>`;
     }
 
@@ -423,14 +424,14 @@ const Export = (() => {
       const hasKey = !!metadata.key;
       // 3-column layout for all renderers
 
-      // Helper: build Naver-compatible chord table (3-column: 코드, 타입, 구성음)
-      // Roman numeral is shown as small text above chord name in 코드 column
+      // Helper: build Naver-compatible chord table (4-column: 도수, 코드, 타입, 구성음)
       function buildNaverTable(chordList, isCompact) {
         let t = '';
         const pad = isCompact ? '6' : '10';
         const sz = isCompact ? '2' : null;
         t += `<table width="100%" border="1" cellpadding="${pad}" cellspacing="0">`;
-        const headerCells = ['코드', '타입', '구성음'];
+        const headerCells = hasKey ? ['도수', '코드', '타입', '구성음'] : ['코드', '타입', '구성음'];
+        const colCount = headerCells.length;
         t += `<tr bgcolor="#f0f0f0">`;
         headerCells.forEach(h => {
           t += sz ? `<td align="center"><font size="${sz}"><b>${h}</b></font></td>` : `<td align="center"><b>${h}</b></td>`;
@@ -450,31 +451,36 @@ const Export = (() => {
             }
             const fmtNotes = notes.map((n, i) => `<b>${esc(n)}</b><font color="#999999" size="1">(${esc(deg[i] || '')})</font>`).join(', ');
             t += `<tr>`;
-            // 코드 column: Roman numeral (small) + chord name
-            let chordCell = '';
+            // 도수 column
             if (hasKey) {
               const info = getScaleDegreeInfo(name, metadata.key);
-              if (info) chordCell += `<font color="#888888" size="1">${esc(info.roman)}</font><br>`;
+              const roman = info ? info.roman : '';
+              t += isCompact
+                ? `<td align="center"><font size="2">${esc(roman)}</font></td>`
+                : `<td align="center">${esc(roman)}</td>`;
             }
-            chordCell += `<b><a href="${chordUrl}">${esc(name)} ▶</a></b>`;
+            // 코드 column
+            const chordCell = `<b><a href="${chordUrl}">${esc(name)} ▶</a></b>`;
             t += isCompact
               ? `<td align="center"><font size="2">${chordCell}</font></td>`
               : `<td align="center">${chordCell}</td>`;
+            // 타입 column
             t += isCompact
               ? `<td align="center"><font color="#888888" size="2">${esc(typeName)}</font></td>`
               : `<td align="center"><font color="#888888">${esc(typeName)}</font></td>`;
+            // 구성음 column
             t += isCompact
               ? `<td align="center"><font size="2">${fmtNotes}</font></td>`
               : `<td align="center">${fmtNotes}</td>`;
             t += `</tr>`;
           });
           if (gi < groups.length - 1) {
-            t += `<tr><td colspan="3" bgcolor="#eef2f7">&nbsp;</td></tr>`;
+            t += `<tr><td colspan="${colCount}" bgcolor="#eef2f7">&nbsp;</td></tr>`;
           }
         });
         t += `</table>`;
         if (hasKey) {
-          t += `<font color="#999999" size="1">* ${esc(primaryKey(metadata.key))} Key 기준</font><br>`;
+          t += `<font color="#999999" size="1">* ${esc(metadata.key)} Key 기준</font><br>`;
         }
         return t;
       }
