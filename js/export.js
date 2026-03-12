@@ -429,7 +429,7 @@ const Export = (() => {
         const pad = isCompact ? '6' : '10';
         const sz = isCompact ? '2' : null;
         t += `<table width="100%" border="1" cellpadding="${pad}" cellspacing="0">`;
-        const headerCells = hasKey ? ['도수', '코드', '타입', '구성음'] : ['코드', '타입', '구성음'];
+        const headerCells = hasKey ? ['도수', '코드', '타입'] : ['코드', '타입'];
         const colCount = headerCells.length;
         t += `<tr bgcolor="#f0f0f0">`;
         headerCells.forEach(h => {
@@ -439,8 +439,6 @@ const Export = (() => {
         const groups = groupChordsByFamily(chordList);
         groups.forEach((group, gi) => {
           group.chords.forEach(name => {
-            const notes = MusicTheory.getChordNotesDisplay(name);
-            const deg = MusicTheory.getChordDegreeLabels(name);
             const chordUrl = `${viewerBase}?chords=${encodeURIComponent(name)}`;
             const parsed = MusicTheory.parseChordName(name);
             let typeName = '';
@@ -448,7 +446,6 @@ const Export = (() => {
               const intervalKey = MusicTheory.SUFFIX_MAP[parsed.suffix] || MusicTheory.SUFFIX_MAP[parsed.suffix.toLowerCase()];
               typeName = typeNames[intervalKey] || parsed.suffix || '메이저';
             }
-            const fmtNotes = notes.map((n, i) => `<b>${esc(n)}</b><font color="#999999" size="1">(${esc(deg[i] || '')})</font>`).join(', ');
             t += `<tr>`;
             // 도수 column
             if (hasKey) {
@@ -467,10 +464,6 @@ const Export = (() => {
             t += isCompact
               ? `<td align="center"><font color="#888888" size="2">${esc(typeName)}</font></td>`
               : `<td align="center"><font color="#888888">${esc(typeName)}</font></td>`;
-            // 구성음 column
-            t += isCompact
-              ? `<td align="center"><font size="2">${fmtNotes}</font></td>`
-              : `<td align="center">${fmtNotes}</td>`;
             t += `</tr>`;
           });
           if (gi < groups.length - 1) {
