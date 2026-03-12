@@ -1,0 +1,148 @@
+/**
+ * MusicXML Parser Module
+ * Extracts song metadata and chord names from MusicXML files
+ */
+const MusicXMLParser = (() => {
+
+  // fifths value → key name mapping
+  const FIFTHS_TO_MAJOR = {
+    '-7': 'Cb', '-6': 'Gb', '-5': 'Db', '-4': 'Ab', '-3': 'Eb', '-2': 'Bb', '-1': 'F',
+    '0': 'C', '1': 'G', '2': 'D', '3': 'A', '4': 'E', '5': 'B', '6': 'F#', '7': 'C#',
+  };
+  const FIFTHS_TO_MINOR = {
+    '-7': 'Abm', '-6': 'Ebm', '-5': 'Bbm', '-4': 'Fm', '-3': 'Cm', '-2': 'Gm', '-1': 'Dm',
+    '0': 'Am', '1': 'Em', '2': 'Bm', '3': 'F#m', '4': 'C#m', '5': 'G#m', '6': 'D#m', '7': 'A#m',
+  };
+
+  // MusicXML harmony kind → chord suffix
+  const KIND_TO_SUFFIX = {
+    'major': '', 'minor': 'm', 'dominant': '7',
+    'major-seventh': 'maj7', 'minor-seventh': 'm7',
+    'diminished-seventh': 'dim7', 'diminished': 'dim',
+    'augmented': 'aug', 'augmented-seventh': 'aug7',
+    'half-diminished': 'm7b5',
+    'major-sixth': '6', 'minor-sixth': 'm6',
+    'suspended-fourth': 'sus4', 'suspended-second': 'sus2',
+    'dominant-ninth': '9', 'minor-ninth': 'm9', 'major-ninth': 'maj9',
+    'dominant-11th': '11', 'dominant-13th': '13',
+    'power': '5', 'major-minor': 'mMaj7',
+    'minor-11th': 'm11', 'minor-13th': 'm13',
+    'major-13th': 'maj13',
+  };
+
+  const ALTER_MAP = { '1': '#', '-1': 'b' };
+
+  /**
+   * Parse a MusicXML string and extract metadata + chords
+   * @param {string} xmlString - Raw XML content
+   * @returns {Object} { songName, artist, composer, lyricist, key, timeSignature, tempo, chords }
+   */
+  function parse(xmlString) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlString, 'text/xml');
+
+    return {
+      songName: parseSongName(doc),
+      artist: parseCreatorField(doc, 'Artist'),
+      composer: parseCreatorField(doc, 'Composed by'),
+      lyricist: parseCreatorField(doc, 'Lyrics by'),
+      key: parseKey(doc),
+      timeSignature: parseTimeSignature(doc),
+      tempo: parseTempo(doc),
+      chords: parseChords(doc),
+    };
+  }
+
+  function parseSongName(doc) {
+    const el = doc.querySelector('work-title');
+    return el ? el.textContent.trim() : '';
+  }
+
+  function parseCreatorField(doc, prefix) {
+    const creators = doc.querySelectorAll('creator');
+    for (const creator of creators) {
+      const text = creator.textContent;
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (line.startsWith(prefix)) {
+          // Extract name: "Artist 김현식 (Kim Hyun-sik)" → "김현식"
+          let value = line.substring(prefix.length).trim();
+          // Remove English name in parentheses
+          value = value.replace(/\s*\(.*?\)\s*/g, '').trim();
+          return value;
+        }
+      }
+    }
+    return '';
+  }
+
+  function parseKey(doc) {
+    const keyEl = doc.querySelector('key');
+    if (!keyEl) return '';
+    const fifths = keyEl.querySelector('fifths');
+    const mode = keyEl.querySelector('mode');
+    if (!fifths) return '';
+
+    const fifthsVal = fifths.textContent.trim();
+    const modeVal = mode ? mode.textContent.trim() : 'major';
+
+    if (modeVal === 'minor') {
+      return FIFTHS_TO_MINOR[fifthsVal] || '';
+    }
+    return FIFTHS_TO_MAJOR[fifthsVal] || '';
+  }
+
+  function parseTimeSignature(doc) {
+    const timeEl = doc.querySelector('time');
+    if (!timeEl) return '';
+    const beats = timeEl.querySelector('beats');
+    const beatType = timeEl.querySelector('beat-type');
+    if (!beats || !beatType) return '';
+    return `${beats.textContent.trim()}/${beatType.textContent.trim()}`;
+  }
+
+  function parseTempo(doc) {
+    const metronome = doc.querySelector('metronome');
+    if (metronome) {
+      const perMin = metronome.querySelector('per-minute');
+      if (perMin) return perMin.textContent.trim();
+    }
+    // Fallback: sound element with tempo attribute
+    const sound = doc.querySelector('sound[tempo]');
+    if (sound) return sound.getAttribute('tempo');
+    return '';
+  }
+
+  function parseChords(doc) {
+    const harmonies = doc.querySelectorAll('harmony');
+    const seen = new Set();
+    const chords = [];
+
+    for (const harmony of harmonies) {
+      const rootStep = harmony.querySelector('root root-step');
+      if (!rootStep) continue;
+
+      let root = rootStep.textContent.trim();
+      const rootAlter = harmony.querySelector('root root-alter');
+      if (rootAlter) {
+        root += ALTER_MAP[rootAlter.textContent.trim()] || '';
+      }
+
+      const kind = harmony.querySelector('kind');
+      const kindText = kind ? kind.textContent.trim() : 'major';
+      const suffix = KIND_TO_SUFFIX[kindText];
+      // Skip unknown kinds
+      if (suffix === undefined) continue;
+
+      const chordName = root + suffix;
+      if (!seen.has(chordName)) {
+        seen.add(chordName);
+        chords.push(chordName);
+      }
+    }
+
+    return chords;
+  }
+
+  return { parse };
+})();

@@ -29,6 +29,8 @@ const Export = (() => {
     const infoRows = [
       { label: '아티스트', value: metadata.artist },
       { label: '앨범', value: metadata.albumName },
+      { label: '작곡', value: metadata.composer },
+      { label: '작사', value: metadata.lyricist },
       { label: '템포', value: metadata.tempo ? `${metadata.tempo} BPM` : '' },
       { label: '박자', value: metadata.timeSignature },
       { label: '키', value: metadata.key },
@@ -315,6 +317,8 @@ const Export = (() => {
     const infoRows = [
       { label: '아티스트', value: metadata.artist },
       { label: '앨범', value: metadata.albumName },
+      { label: '작곡', value: metadata.composer },
+      { label: '작사', value: metadata.lyricist },
       { label: '템포', value: metadata.tempo ? `${metadata.tempo} BPM` : '' },
       { label: '박자', value: metadata.timeSignature },
       { label: '키', value: metadata.key },
@@ -425,6 +429,8 @@ const Export = (() => {
     const infoRows = [
       { label: '아티스트', value: metadata.artist },
       { label: '앨범', value: metadata.albumName },
+      { label: '작곡', value: metadata.composer },
+      { label: '작사', value: metadata.lyricist },
       { label: '템포', value: metadata.tempo ? `${metadata.tempo} BPM` : '' },
       { label: '박자', value: metadata.timeSignature },
       { label: '키', value: metadata.key },

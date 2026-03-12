@@ -9,6 +9,8 @@ const App = (() => {
       songName: '',
       artist: '',
       albumName: '',
+      composer: '',
+      lyricist: '',
       tempo: '',
       timeSignature: '',
       key: '',
@@ -37,6 +39,7 @@ const App = (() => {
     setupNotationTabs();
     setupExportButtons();
     setupQuickChords();
+    setupMusicXMLUpload();
 
     // Load saved state from localStorage
     loadState();
@@ -48,7 +51,7 @@ const App = (() => {
   // Metadata Form
   // =========================================
   function setupMetadataListeners() {
-    const fields = ['songName', 'artist', 'albumName', 'tempo', 'timeSignature', 'songKey'];
+    const fields = ['songName', 'artist', 'albumName', 'composer', 'lyricist', 'tempo', 'timeSignature', 'songKey'];
 
     fields.forEach(id => {
       const el = document.getElementById(id);
@@ -70,6 +73,70 @@ const App = (() => {
         updateAll();
       });
     }
+  }
+
+  // =========================================
+  // MusicXML Upload
+  // =========================================
+  function setupMusicXMLUpload() {
+    const btn = document.getElementById('uploadMxmlBtn');
+    const input = document.getElementById('mxmlFileInput');
+    if (!btn || !input) return;
+
+    btn.addEventListener('click', () => input.click());
+    input.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        btn.textContent = '불러오는 중...';
+        btn.disabled = true;
+
+        const text = await file.text();
+        const result = MusicXMLParser.parse(text);
+
+        // Fill metadata
+        if (result.songName) { state.metadata.songName = result.songName; document.getElementById('songName').value = result.songName; }
+        if (result.artist) { state.metadata.artist = result.artist; document.getElementById('artist').value = result.artist; }
+        if (result.composer) { state.metadata.composer = result.composer; document.getElementById('composer').value = result.composer; }
+        if (result.lyricist) { state.metadata.lyricist = result.lyricist; document.getElementById('lyricist').value = result.lyricist; }
+        if (result.tempo) { state.metadata.tempo = result.tempo; document.getElementById('tempo').value = result.tempo; }
+        if (result.timeSignature) { state.metadata.timeSignature = result.timeSignature; document.getElementById('timeSignature').value = result.timeSignature; }
+        if (result.key) { state.metadata.key = result.key; document.getElementById('songKey').value = result.key; }
+
+        // Add chords
+        if (result.chords.length > 0) {
+          state.selectedChords = [];
+          result.chords.forEach(name => {
+            if (!state.selectedChords.includes(name)) {
+              state.selectedChords.push(name);
+            }
+          });
+          renderSelectedChords();
+        }
+
+        saveState();
+        updateAll();
+
+        // Search album via iTunes
+        if (result.songName || result.artist) {
+          const album = await ITunesSearch.searchAlbum(result.songName, result.artist);
+          if (album && album.albumName && !state.metadata.albumName) {
+            state.metadata.albumName = album.albumName;
+            document.getElementById('albumName').value = album.albumName;
+            saveState();
+            updatePreview();
+          }
+        }
+      } catch (err) {
+        console.error('MusicXML parse failed:', err);
+        alert('MusicXML 파일을 읽지 못했습니다.');
+      } finally {
+        btn.textContent = 'MusicXML 불러오기';
+        btn.disabled = false;
+        input.value = '';
+      }
+    });
   }
 
   // =========================================
@@ -483,6 +550,8 @@ const App = (() => {
       document.getElementById('songName').value = state.metadata.songName || '';
       document.getElementById('artist').value = state.metadata.artist || '';
       document.getElementById('albumName').value = state.metadata.albumName || '';
+      document.getElementById('composer').value = state.metadata.composer || '';
+      document.getElementById('lyricist').value = state.metadata.lyricist || '';
       document.getElementById('tempo').value = state.metadata.tempo || '';
       document.getElementById('timeSignature').value = state.metadata.timeSignature || '';
       document.getElementById('songKey').value = state.metadata.key || '';
